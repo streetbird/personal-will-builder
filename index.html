@@ -365,17 +365,24 @@ DISCLAIMER: This document is a draft template and may not be legally valid. Will
     // 检查每个资产卡片
     for (var i = 0; i < assetCards.length; i++) {
       var card = assetCards[i];
+      console.log('Checking card ' + (i+1));
 
       // 检查资产类型
       var select = card.querySelector('select');
       var assetType = '';
       var hasValidType = false;
 
+      console.log('Select element found:', select ? 'yes' : 'no');
+
       if (select) {
         var selectedOption = select.options[select.selectedIndex];
+        console.log('Selected index:', select.selectedIndex);
+        console.log('Selected option:', selectedOption);
+
         if (selectedOption) {
           assetType = selectedOption.text || selectedOption.value || '';
           var trimmedType = assetType.trim();
+          console.log('Asset type text:', trimmedType);
 
           // 只要不是空，且不包含"选择"字样，就认为是有效的
           if (trimmedType &&
@@ -390,32 +397,42 @@ DISCLAIMER: This document is a draft template and may not be legally valid. Will
       // 检查资产描述（textarea）
       var textarea = card.querySelector('textarea');
       var assetDescription = '';
+
+      console.log('Textarea element found:', textarea ? 'yes' : 'no');
+
       if (textarea) {
         assetDescription = textarea.value.trim();
+        console.log('Textarea value:', assetDescription);
       }
 
-      console.log('Asset ' + (i+1) + ': hasValidType=' + hasValidType + ', type="' + assetType + '", description="' + assetDescription + '"');
+      console.log('Asset ' + (i+1) + ' Summary: hasValidType=' + hasValidType + ', type="' + assetType + '", description="' + assetDescription + '"');
 
-      // 验证1：资产类型必须选择
+      // 只有当选择了类型但没有填写描述时才报错
+      // 如果类型和描述都有，通过验证
+      if (hasValidType && assetDescription && assetDescription.length > 0) {
+        console.log('Asset ' + (i+1) + ' validation passed');
+        // 保存当前资产信息用于重复检查
+        assets.push({
+          index: i + 1,
+          type: assetType,
+          description: assetDescription
+        });
+        continue; // 验证通过，继续下一个
+      }
+
+      // 如果类型选择了但描述为空
+      if (hasValidType && (!assetDescription || assetDescription.length === 0)) {
+        console.log('Validation failed: type selected but description empty');
+        alert('请补充完整资产项目内容');
+        return false;
+      }
+
+      // 如果类型未选择
       if (!hasValidType) {
         console.log('Validation failed: type not selected');
         alert('请补充完整资产项目内容');
         return false;
       }
-
-      // 验证2：资产描述必须填写
-      if (!assetDescription || assetDescription.length === 0) {
-        console.log('Validation failed: description empty');
-        alert('请补充完整资产项目内容');
-        return false;
-      }
-
-      // 保存当前资产信息用于重复检查
-      assets.push({
-        index: i + 1,
-        type: assetType,
-        description: assetDescription
-      });
     }
 
     // 验证3：检测重复资产（相同类型+相同描述）
@@ -423,6 +440,7 @@ DISCLAIMER: This document is a draft template and may not be legally valid. Will
       for (var j = i + 1; j < assets.length; j++) {
         if (assets[i].type === assets[j].type &&
             assets[i].description === assets[j].description) {
+          console.log('Validation failed: duplicate assets found');
           alert('请补充完整资产项目内容');
           return false;
         }
