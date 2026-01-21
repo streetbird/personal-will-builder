@@ -232,107 +232,82 @@ DISCLAIMER: This document is a draft template and may not be legally valid. Will
 // 将添加资产和添加受益人按钮移到列表底部
 (function() {
   'use strict';
-  
+
   console.log('Button relocation script loaded');
-  
+
   function relocateAddButtons() {
     // 查找所有包含"添加资产"或"添加受益人"的按钮
     const buttons = document.querySelectorAll('button');
-    
+
     buttons.forEach(function(btn) {
       const text = btn.textContent || '';
       const isAddAsset = text.includes('添加资产') || text.includes('Add Asset');
       const isAddBeneficiary = text.includes('添加受益人') || text.includes('Add Beneficiary');
-      
+
       if (!isAddAsset && !isAddBeneficiary) return;
       if (btn.getAttribute('data-button-relocated') === 'true') return;
-      
-      // 标记原按钮
+
+      // 标记按钮已处理
       btn.setAttribute('data-button-relocated', 'true');
-      const buttonType = isAddAsset ? 'asset' : 'beneficiary';
-      
-      // 查找包含按钮的卡片容器
-      let container = btn.closest('[class*="space-y-4"]');
-      if (!container) return;
-      
-      // 检查是否已经创建了底部按钮
-      if (container.querySelector('.relocated-add-btn-' + buttonType)) return;
-      
-      // 创建底部按钮容器
-      const bottomContainer = document.createElement('div');
-      bottomContainer.className = 'relocated-add-btn-' + buttonType;
-      bottomContainer.style.cssText = 'margin-top: 1.5rem; display: flex; justify-content: center; width: 100%;';
-      
-      // 创建新按钮（完全克隆原按钮的样式）
-      const newBtn = document.createElement('button');
-      newBtn.className = btn.className;
-      newBtn.innerHTML = btn.innerHTML;
-      newBtn.type = 'button';
-      
-      // 关键：使用 MouseEvent 触发原按钮，确保 React 事件被触发
-      newBtn.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // 创建并分发真实的鼠标点击事件
-        const clickEvent = new MouseEvent('click', {
-          view: window,
-          bubbles: true,
-          cancelable: true,
-          buttons: 1
-        });
-        
-        btn.dispatchEvent(clickEvent);
-      });
-      
-      bottomContainer.appendChild(newBtn);
-      container.appendChild(bottomContainer);
-      
-      // 隐藏原按钮（但保留在DOM中以保持React状态）
-      const originalParent = btn.parentElement;
-      if (originalParent) {
-        originalParent.style.display = 'none';
-      }
+
+      // 找到按钮的父容器（通常是包含按钮的div）
+      const buttonContainer = btn.parentElement;
+      if (!buttonContainer) return;
+
+      // 找到列表容器（包含所有资产或受益人卡片的容器）
+      const listContainer = buttonContainer.parentElement;
+      if (!listContainer) return;
+
+      // 将按钮容器移动到列表容器的最后
+      // 这样新添加的项目会出现在按钮之前
+      listContainer.appendChild(buttonContainer);
+
+      console.log('Relocated button to bottom:', text);
     });
   }
-  
+
   // 延迟执行以确保React已渲染
   function init() {
-    setTimeout(relocateAddButtons, 800);
-    setTimeout(relocateAddButtons, 1500);
-    setTimeout(relocateAddButtons, 3000);
+    setTimeout(relocateAddButtons, 500);
+    setTimeout(relocateAddButtons, 1000);
+    setTimeout(relocateAddButtons, 2000);
   }
-  
+
   // 页面加载时执行
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
   }
-  
-  // 监听DOM变化以处理React更新
+
+  // 监听DOM变化，当添加新项目时确保按钮保持在底部
   const observer = new MutationObserver(function(mutations) {
     let shouldRelocate = false;
-    
+
     mutations.forEach(function(mutation) {
+      // 检查是否有新节点添加
       if (mutation.addedNodes.length > 0) {
         mutation.addedNodes.forEach(function(node) {
           if (node.nodeType === 1) {
-            const hasButton = node.tagName === 'BUTTON' || 
-                            (node.querySelector && node.querySelector('button'));
-            if (hasButton) {
+            // 检查是否是资产或受益人卡片
+            const isCard = node.className &&
+                          (node.className.includes('p-4') ||
+                           node.className.includes('border') ||
+                           node.querySelector && node.querySelector('input'));
+            if (isCard) {
               shouldRelocate = true;
             }
           }
         });
       }
     });
-    
+
     if (shouldRelocate) {
-      setTimeout(relocateAddButtons, 200);
+      // 当检测到新卡片添加时，重新定位按钮确保它在最后
+      setTimeout(relocateAddButtons, 100);
     }
   });
-  
+
   observer.observe(document.body, {
     childList: true,
     subtree: true
