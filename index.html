@@ -228,3 +228,113 @@ DISCLAIMER: This document is a draft template and may not be legally valid. Will
   });
 })();
 </script>
+<style>
+/* 将添加资产和添加受益人按钮移到列表底部 */
+/* 针对资产和受益人页面的容器 */
+[class*="space-y-6"] > [class*="space-y-4"] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 将标题和按钮所在的flex容器调整顺序 */
+[class*="space-y-6"] > [class*="space-y-4"] > [class*="flex"][class*="justify-between"] {
+  order: -1;
+}
+
+/* 将"添加资产"和"添加受益人"按钮移到底部 */
+[class*="space-y-6"] > [class*="space-y-4"] > [class*="flex"][class*="justify-between"]:has(button:first-child) button:first-child {
+  position: absolute;
+  top: -9999px;
+  left: -9999px;
+}
+
+/* 在列表后添加按钮的容器样式 */
+@media (max-width: 768px) {
+  /* 移动端优化：确保按钮在列表底部可见 */
+  [class*="space-y-4"] {
+    position: relative;
+  }
+}
+</style>
+
+<script>
+// 更可靠的按钮重定位脚本
+(function() {
+  'use strict';
+  
+  function relocateButtons() {
+    // 查找所有包含"添加资产"或"添加受益人"的按钮
+    const addButtons = Array.from(document.querySelectorAll('button')).filter(btn => {
+      const text = btn.textContent || '';
+      return text.includes('添加资产') || text.includes('Add Asset') || 
+             text.includes('添加受益人') || text.includes('Add Beneficiary');
+    });
+    
+    addButtons.forEach(function(originalButton) {
+      if (originalButton.getAttribute('data-relocated')) return;
+      originalButton.setAttribute('data-relocated', 'true');
+      
+      // 找到按钮所在的卡片容器
+      let cardContainer = originalButton.closest('[class*="space-y-4"]');
+      if (!cardContainer) return;
+      
+      // 创建底部按钮容器
+      const buttonType = originalButton.textContent.includes('资产') || originalButton.textContent.includes('Asset') ? 'asset' : 'beneficiary';
+      let bottomButtonContainer = cardContainer.querySelector('.bottom-add-button-' + buttonType);
+      
+      if (!bottomButtonContainer) {
+        bottomButtonContainer = document.createElement('div');
+        bottomButtonContainer.className = 'bottom-add-button-' + buttonType;
+        bottomButtonContainer.style.cssText = 'display: flex; justify-content: center; margin-top: 1rem; width: 100%;';
+        
+        // 克隆按钮
+        const newButton = originalButton.cloneNode(true);
+        newButton.removeAttribute('data-relocated');
+        
+        // 保持原按钮的所有事件处理器
+        const originalClickHandler = originalButton.onclick;
+        newButton.onclick = function(e) {
+          if (originalClickHandler) {
+            originalClickHandler.call(originalButton, e);
+          } else {
+            originalButton.click();
+          }
+        };
+        
+        bottomButtonContainer.appendChild(newButton);
+        cardContainer.appendChild(bottomButtonContainer);
+        
+        // 隐藏原按钮（但不删除，保持事件处理器）
+        originalButton.style.cssText = 'position: absolute; left: -9999px; top: -9999px;';
+      }
+    });
+  }
+  
+  // 页面加载完成后执行
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+      setTimeout(relocateButtons, 500);
+    });
+  } else {
+    setTimeout(relocateButtons, 500);
+  }
+  
+  // 监听React可能的更新
+  const observer = new MutationObserver(function(mutations) {
+    // 检查是否有新按钮添加
+    const hasNewButtons = mutations.some(m => 
+      Array.from(m.addedNodes).some(node => 
+        node.nodeType === 1 && node.querySelector && node.querySelector('button')
+      )
+    );
+    if (hasNewButtons) {
+      setTimeout(relocateButtons, 100);
+    }
+  });
+  
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+})();
+</script>
