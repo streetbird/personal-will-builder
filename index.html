@@ -372,23 +372,17 @@ DISCLAIMER: This document is a draft template and may not be legally valid. Will
       var hasValidType = false;
 
       if (select) {
-        // 检查是否选择了有效的选项（不是第一个占位符选项）
-        if (select.selectedIndex > 0) {
-          hasValidType = true;
-          var selectedOption = select.options[select.selectedIndex];
-          if (selectedOption) {
-            assetType = selectedOption.text || select.value || '';
-          }
-        } else if (select.value && select.value !== '' && select.value !== 'placeholder') {
-          // 有些实现可能不使用index，而是通过value判断
-          var selectedOption = select.options[select.selectedIndex];
-          if (selectedOption) {
-            var optionText = selectedOption.text || '';
-            // 如果选项文本不包含"选择"，认为是有效选择
-            if (!optionText.includes('选择') && !optionText.includes('Select') && optionText.trim() !== '') {
-              hasValidType = true;
-              assetType = optionText;
-            }
+        var selectedOption = select.options[select.selectedIndex];
+        if (selectedOption) {
+          assetType = selectedOption.text || selectedOption.value || '';
+          var trimmedType = assetType.trim();
+
+          // 只要不是空，且不包含"选择"字样，就认为是有效的
+          if (trimmedType &&
+              !trimmedType.includes('选择') &&
+              !trimmedType.includes('Select') &&
+              trimmedType !== '---') {
+            hasValidType = true;
           }
         }
       }
@@ -404,12 +398,14 @@ DISCLAIMER: This document is a draft template and may not be legally valid. Will
 
       // 验证1：资产类型必须选择
       if (!hasValidType) {
+        console.log('Validation failed: type not selected');
         alert('请补充完整资产项目内容');
         return false;
       }
 
       // 验证2：资产描述必须填写
       if (!assetDescription || assetDescription.length === 0) {
+        console.log('Validation failed: description empty');
         alert('请补充完整资产项目内容');
         return false;
       }
