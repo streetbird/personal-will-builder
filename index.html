@@ -185,38 +185,49 @@ DISCLAIMER: This document is a draft template and may not be legally valid. Will
         }
       });
       
-      if (!currentName || !currentRelation) return;
-      
+      // 如果姓名都没填，不需要验证
+      if (!currentName) return;
+
       // 检查其他受益人卡片
       var allCards = document.querySelectorAll('[class*="p-4"]');
       var duplicateFound = false;
-      
+      var errorMessage = '';
+
       allCards.forEach(function(card) {
         if (card === currentCard) return;
-        
+
         var cardInputs = card.querySelectorAll('input');
         var cardName = '';
         var cardRelation = '';
-        
+
         cardInputs.forEach(function(input) {
           var ph = input.placeholder || '';
           if (ph.includes('李四') || ph.includes('Jane Doe')) {
             cardName = input.value.trim();
           }
-          if (ph.includes('女儿') || ph.includes('配偶') || 
+          if (ph.includes('女儿') || ph.includes('配偶') ||
               ph.includes('Daughter') || ph.includes('Spouse')) {
             cardRelation = input.value.trim();
           }
         });
-        
-        if (cardName && cardRelation && 
-            cardName === currentName && cardRelation === currentRelation) {
-          duplicateFound = true;
+
+        // 如果姓名相同
+        if (cardName && cardName === currentName) {
+          // 情况1：两者都没有填关系（无法区分是否同一人）
+          if (!currentRelation && !cardRelation) {
+            duplicateFound = true;
+            errorMessage = '错误：已存在相同姓名的受益人，请填写关系以区分！\n\nError: A beneficiary with the same name already exists. Please add relationship to distinguish!';
+          }
+          // 情况2：关系也相同（明确是重复）
+          else if (currentRelation && cardRelation && currentRelation === cardRelation) {
+            duplicateFound = true;
+            errorMessage = '错误：已存在相同姓名和关系的受益人！\n\nError: A beneficiary with the same name and relationship already exists!';
+          }
         }
       });
-      
+
       if (duplicateFound) {
-        alert('错误：已存在相同姓名和关系的受益人！\n\nError: A beneficiary with the same name and relationship already exists!');
+        alert(errorMessage);
         target.style.borderColor = '#ef4444';
         target.style.boxShadow = '0 0 0 1px #ef4444';
         setTimeout(function() {
@@ -268,9 +279,12 @@ DISCLAIMER: This document is a draft template and may not be legally valid. Will
 
   // 延迟执行以确保React已渲染
   function init() {
-    setTimeout(relocateAddButtons, 500);
+    setTimeout(relocateAddButtons, 300);
+    setTimeout(relocateAddButtons, 600);
     setTimeout(relocateAddButtons, 1000);
-    setTimeout(relocateAddButtons, 2000);
+    setTimeout(relocateAddButtons, 1500);
+    setTimeout(relocateAddButtons, 2500);
+    setTimeout(relocateAddButtons, 4000);
   }
 
   // 页面加载时执行
@@ -312,5 +326,165 @@ DISCLAIMER: This document is a draft template and may not be legally valid. Will
     childList: true,
     subtree: true
   });
+})();
+</script>
+<script>
+// 验证资产和受益人信息完整性
+(function() {
+  'use strict';
+
+  console.log('Form validation script loaded');
+
+  // 验证资产信息
+  function validateAssets() {
+    // 查找所有资产卡片
+    var assetCards = [];
+    var allCards = document.querySelectorAll('[class*="p-4"]');
+
+    allCards.forEach(function(card) {
+      var inputs = card.querySelectorAll('input');
+      var hasAssetFields = false;
+
+      inputs.forEach(function(input) {
+        var ph = input.placeholder || '';
+        // 检查是否包含资产相关的placeholder
+        if (ph.includes('BMW') || ph.includes('0.00') ||
+            ph.includes('车辆') || ph.includes('房产') || ph.includes('Vehicle')) {
+          hasAssetFields = true;
+        }
+      });
+
+      if (hasAssetFields) {
+        assetCards.push(card);
+      }
+    });
+
+    // 检查每个资产卡片的描述字段
+    for (var i = 0; i < assetCards.length; i++) {
+      var card = assetCards[i];
+      var inputs = card.querySelectorAll('input');
+      var hasDescription = false;
+
+      inputs.forEach(function(input) {
+        var ph = input.placeholder || '';
+        // 资产描述字段（如"BMW"）
+        if (ph.includes('BMW') || ph.includes('车辆') || ph.includes('Vehicle')) {
+          var value = input.value.trim();
+          if (value && value.length > 0) {
+            hasDescription = true;
+          }
+        }
+      });
+
+      if (!hasDescription) {
+        alert('错误：第 ' + (i + 1) + ' 项资产的"资产项目"未填写！\n请填写资产描述或删除该资产项。\n\nError: Asset #' + (i + 1) + ' description is empty!\nPlease fill in the asset description or delete this asset.');
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // 验证受益人信息
+  function validateBeneficiaries() {
+    // 查找所有受益人卡片
+    var beneficiaryCards = [];
+    var allCards = document.querySelectorAll('[class*="p-4"]');
+
+    allCards.forEach(function(card) {
+      var inputs = card.querySelectorAll('input');
+      var hasBeneficiaryFields = false;
+
+      inputs.forEach(function(input) {
+        var ph = input.placeholder || '';
+        // 检查是否包含受益人相关的placeholder
+        if (ph.includes('李四') || ph.includes('Jane Doe') ||
+            ph.includes('女儿') || ph.includes('配偶') ||
+            ph.includes('Daughter') || ph.includes('Spouse')) {
+          hasBeneficiaryFields = true;
+        }
+      });
+
+      if (hasBeneficiaryFields) {
+        beneficiaryCards.push(card);
+      }
+    });
+
+    // 检查每个受益人是否至少填写了姓名
+    for (var i = 0; i < beneficiaryCards.length; i++) {
+      var card = beneficiaryCards[i];
+      var inputs = card.querySelectorAll('input');
+      var hasName = false;
+
+      inputs.forEach(function(input) {
+        var ph = input.placeholder || '';
+        // 姓名字段
+        if (ph.includes('李四') || ph.includes('Jane Doe')) {
+          var value = input.value.trim();
+          if (value && value.length > 0) {
+            hasName = true;
+          }
+        }
+      });
+
+      if (!hasName) {
+        alert('错误：第 ' + (i + 1) + ' 个受益人的姓名未填写！\n请填写受益人姓名或删除该受益人。\n\nError: Beneficiary #' + (i + 1) + ' name is empty!\nPlease fill in the beneficiary name or delete this beneficiary.');
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // 拦截"下一步"按钮点击
+  function interceptNextButton() {
+    document.addEventListener('click', function(e) {
+      var target = e.target;
+
+      // 查找最近的button元素
+      while (target && target.tagName !== 'BUTTON') {
+        target = target.parentElement;
+        if (!target || target === document.body) return;
+      }
+
+      if (!target) return;
+
+      var buttonText = target.textContent || '';
+
+      // 检查是否是"下一步"按钮
+      if (buttonText.includes('下一步') || buttonText.includes('Next')) {
+        // 判断当前在哪个页面
+        var pageTitle = document.querySelector('h1, h2');
+        var pageTitleText = pageTitle ? pageTitle.textContent : '';
+
+        // 如果在资产页面
+        if (pageTitleText.includes('资产') || pageTitleText.includes('Asset')) {
+          if (!validateAssets()) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            return false;
+          }
+        }
+
+        // 如果在受益人页面
+        if (pageTitleText.includes('受益人') || pageTitleText.includes('Beneficiar')) {
+          if (!validateBeneficiaries()) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            return false;
+          }
+        }
+      }
+    }, true); // 使用捕获阶段，确保在React之前拦截
+  }
+
+  // 页面加载后启动拦截
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', interceptNextButton);
+  } else {
+    interceptNextButton();
+  }
 })();
 </script>
