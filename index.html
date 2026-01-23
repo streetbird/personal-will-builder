@@ -648,3 +648,131 @@ DISCLAIMER: This document is a draft template and may not be legally valid. Will
   }
 })();
 </script>
+
+<script>
+// Capacitor 原生应用导出/打印集成
+(() => {
+  // 只在 Capacitor App 内运行
+  const isCapApp = !!(window.Capacitor?.isNativePlatform?.());
+  if (!isCapApp) {
+    console.log('[Export/Print] Not a Capacitor app, using web APIs');
+    return;
+  }
+
+  const Plugins = window.Capacitor?.Plugins;
+  if (!Plugins?.Filesystem || !Plugins?.Share) {
+    console.warn('[Export/Print] Capacitor Plugins missing:', Plugins);
+    return;
+  }
+
+  const { Filesystem, Share } = Plugins;
+  const Directory = Plugins?.Filesystem?.Directory;
+  const Encoding = Plugins?.Filesystem?.Encoding;
+
+  // 获取遗嘱文本内容
+  function getWillText() {
+    // 尝试多种选择器找到遗嘱预览区域
+    const selectors = [
+      'pre.whitespace-pre-wrap.font-serif',  // 主要选择器（基于代码分析）
+      '#willPreview',
+      '.will-preview',
+      '[data-role="will-preview"]',
+      'pre'
+    ];
+
+    for (const selector of selectors) {
+      const el = document.querySelector(selector);
+      if (el) {
+        const text = (el.innerText || el.textContent || '').trim();
+        if (text.length > 100) {  // 确保找到的是实际内容而不是空白
+          console.log('[Export/Print] Found will text using selector:', selector, 'Length:', text.length);
+          return text;
+        }
+      }
+    }
+
+    // 兜底：找最长的一段文本（避免拿到按钮文案）
+    const candidates = Array.from(document.querySelectorAll('div, section, article, pre'))
+      .map(n => (n.innerText || n.textContent || '').trim())
+      .filter(t => t.length > 200)  // 遗嘱内容应该比较长
+      .sort((a, b) => b.length - a.length);
+
+    const text = candidates[0] || '';
+    console.log('[Export/Print] Using fallback text extraction. Length:', text.length);
+    return text.trim();
+  }
+
+  // 导出遗嘱为文件并分享
+  async function exportWill() {
+    try {
+      const text = getWillText();
+      if (!text || text.length < 50) {
+        alert('未找到遗嘱文本。请先进入预览页面再导出。\nNo will text found. Please navigate to preview page first.');
+        console.error('[Export/Print] Will text too short or empty:', text.length);
+        return;
+      }
+
+      const filename = `will-${new Date().toISOString().slice(0,10)}.txt`;
+      console.log('[Export/Print] Writing file:', filename);
+
+      // 写入文件到文档目录
+      await Filesystem.writeFile({
+        path: filename,
+        data: text,
+        directory: Directory.Documents,
+        encoding: Encoding.UTF8
+      });
+
+      console.log('[Export/Print] File written successfully');
+
+      // 获取文件 URI
+      const uri = await Filesystem.getUri({
+        directory: Directory.Documents,
+        path: filename
+      });
+
+      console.log('[Export/Print] File URI:', uri.uri);
+
+      // 通过分享功能让用户选择保存或打印
+      await Share.share({
+        title: 'Personal Will / 个人遗嘱',
+        url: uri.uri,
+        dialogTitle: 'Export / Print / 导出或打印'
+      });
+
+      console.log('[Export/Print] Share completed successfully');
+    } catch (err) {
+      console.error('[Export/Print] Failed:', err);
+      alert(`导出/打印失败 / Export/Print failed: ${err.message || err}`);
+    }
+  }
+
+  // 用事件委托拦截下载和打印按钮（比"反复找按钮并绑定"更稳定）
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest('button, a');
+    if (!target) return;
+
+    const label = (target.innerText || target.textContent || '').trim();
+
+    // 匹配下载和打印按钮的文本（支持中英文）
+    // 基于实际的翻译key: "download" 和 "printWill"
+    const isDownload = /下载|download|Download/i.test(label);
+    const isPrint = /打印|print|Print/i.test(label);
+
+    if (isDownload || isPrint) {
+      console.log('[Export/Print] Intercepted button click:', label, 'isDownload:', isDownload, 'isPrint:', isPrint);
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      exportWill().catch(err => {
+        console.error('[Export/Print] Export failed:', err);
+      });
+
+      return false;
+    }
+  }, true);  // 使用捕获阶段确保先于其他处理器执行
+
+  console.log('[Export/Print] Capacitor export/print hook enabled');
+})();
+</script>
